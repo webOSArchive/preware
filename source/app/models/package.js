@@ -18,9 +18,13 @@ function packageModel(infoString, infoObj)
 		this.pkg =					(infoObj && infoObj.pkg ? infoObj.pkg : false);
 		this.type =					(infoObj && infoObj.type ? infoObj.type : false);
 		this.category =				false;
+		// true when title/category were only derived from the plain control fields
+		// (Description/Section) rather than from a feed's Source object -- see infoLoad
+		this.categoryIsFallback =	false;
 		this.version =				false;
 		this.maintainer =			false;
 		this.title =				(infoObj && infoObj.title ? infoObj.title : false);
+		this.titleIsFallback =		false;
 		this.size =					false;
 		this.filename =				(infoObj && infoObj.filename ? infoObj.filename : false);
 		this.location =				(infoObj && infoObj.location ? infoObj.location : false);
@@ -229,8 +233,21 @@ packageModel.prototype.infoLoad = function(info)
 				this.appCatalog = true;
 			}
 		
-			if (!this.category &&			sourceJson.Category)			this.category =				sourceJson.Category;
-			if (!this.title &&				sourceJson.Title)				this.title =				sourceJson.Title;
+			// Not just `if (!this.title)`: ipkg DROPS the Source field when it writes
+			// usr/lib/ipkg/status, so an installed package is loaded from status with no Source at
+			// all and falls back to using its Description as its name (below). The feed entry that
+			// merges in afterwards is the only place a real title exists, and it has to win --
+			// otherwise every package is renamed to its own Description the moment it is installed.
+			if ((!this.category || this.categoryIsFallback) && sourceJson.Category)
+			{
+				this.category =				sourceJson.Category;
+				this.categoryIsFallback =	false;
+			}
+			if ((!this.title || this.titleIsFallback) && sourceJson.Title)
+			{
+				this.title =				sourceJson.Title;
+				this.titleIsFallback =		false;
+			}
 			if (!this.icon &&				sourceJson.Icon)				this.icon =					sourceJson.Icon;
 			if (!this.date && sourceJson.LastUpdated && isNumeric(sourceJson.LastUpdated)) this.date = sourceJson.LastUpdated;
 			if (!this.homepage &&			sourceJson.Homepage)			this.homepage =				sourceJson.Homepage;
@@ -305,8 +322,8 @@ packageModel.prototype.infoLoad = function(info)
 		}
 		
 		// load info that may not be in source object
-		if (!this.category &&	info.Section)		this.category =	info.Section;
-		if (!this.title &&		info.Description)	this.title =	info.Description;
+		if (!this.category &&	info.Section)		{ this.category = info.Section;		this.categoryIsFallback = true; }
+		if (!this.title &&		info.Description)	{ this.title = info.Description;	this.titleIsFallback = true; }
 		
 		// parse maintainer
 		if ((!this.maintainer || this.maintainer.length == 0) && info.Maintainer)
@@ -406,8 +423,18 @@ packageModel.prototype.infoLoadFromPkg = function(pkg)
 		// check blacklist
 		if (pkg.blacklisted == true) this.blacklisted = true;
 		
-		if (!this.title || this.title == 'This is a webOS application.')	this.title = pkg.title;
-		if (this.category == 'Unsorted')	this.category =			pkg.category;
+		if (!this.title || this.title == 'This is a webOS application.'
+			|| (this.titleIsFallback && pkg.title && !pkg.titleIsFallback))
+		{
+			this.title =			pkg.title;
+			this.titleIsFallback =	pkg.titleIsFallback;
+		}
+		if (this.category == 'Unsorted'
+			|| (this.categoryIsFallback && pkg.category && !pkg.categoryIsFallback))
+		{
+			this.category =				pkg.category;
+			this.categoryIsFallback =	pkg.categoryIsFallback;
+		}
 		if (!this.maintainer || this.maintainer.length == 0
 			|| (this.maintainer.length == 1 && this.maintainer[0].name == 'N/A')) this.maintainer = pkg.maintainer;
 		if (!this.maintUrl)					this.maintUrl =				pkg.maintUrl;
