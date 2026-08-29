@@ -65,9 +65,26 @@ cp $APPS/usr/palm/applications/${PID}/dbus/${SID}.json /var/palm/ls2/roles/prv/$
 cp $APPS/usr/palm/applications/${PID}/dbus/${SID}.json /var/palm/ls2/roles/pub/${SID}.json
 /usr/bin/ls-control scan-services || true
 
-# Install the upstart script
+# Install the upstart script.
+#
+# ATOMICALLY: upstart watches /var/palm/event.d and re-reads a job the moment
+# the file changes, so copying INTO that directory lets it read the job half
+# written -- it logs "unable to read: Invalid argument", ends up with no valid
+# definition, and the `start` below is then a no-op. The job sits (stop)
+# waiting, ipkgservice never runs, and Preware has no backend until the device
+# is rebooted. (On webOS 3.x a power-menu Luna Restart taken in that state can
+# freeze the device.) Writing to a temp path first and renaming means upstart's
+# inotify sees either the old file or the complete new one, never a partial.
+#
+# The temp file must NOT live in /var/palm/event.d -- upstart would parse it as
+# a job in its own right. /var/palm is the same filesystem, so mv is rename(2).
+#
+# Measured on webOS CE 3.1.0, where several packages install during the
+# first-boot preload pass: roughly 1 boot in 6 lost ipkgservice this way. On an
+# idle device the window is small enough that this has gone unnoticed for years.
 mkdir -p /var/palm/event.d
-cp $APPS/usr/palm/applications/${PID}/upstart/${SID} /var/palm/event.d/${SID}
+cp $APPS/usr/palm/applications/${PID}/upstart/${SID} /var/palm/.${SID}.new
+mv /var/palm/.${SID}.new /var/palm/event.d/${SID}
 
 # Start the service
 /sbin/start ${SID}
