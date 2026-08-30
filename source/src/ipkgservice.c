@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <getopt.h>
+#include <unistd.h>   /* sleep() -- see the registration-failure path in main() */
 
 #include "ipkgservice.h"
 
@@ -82,9 +83,39 @@ int main(int argc, char *argv[]) {
   if (getopts(argc, argv) == 1)
     return 1;
 
-  if (luna_service_initialize("org.webosinternals.ipkgservice"))
-    luna_service_start();
+  if (luna_service_initialize("org.webosinternals.ipkgservice")) {
+    luna_service_start();       /* g_main_loop_run: does not return */
+    return 0;
+  }
 
-  return 0;
+  /*
+   * Registration failed -- we could not take the bus name. Almost always that
+   * means an instance is already serving it: the hub can activate this binary
+   * through dbus/org.webosinternals.ipkgservice.service, and the upstart job
+   * execs the same binary, so the two can race on any boot.
+   *
+   * This used to `return 0`, i.e. report "could not get the bus name" to
+   * upstart as a clean, successful exit. With `respawn` in the job, upstart
+   * restarted us immediately, we exited 0 again, and eleven rounds later:
+   *
+   *     org.webosinternals.ipkgservice main process ended, respawning
+   *     respawn_count: 11 > respawn_limit: 10
+   *     respawning too fast, stopped
+   *
+   * -- leaving the job parked at (stop) waiting while the other instance kept
+   * answering. Preware still worked, so it looked fine, but on webOS 3.x a
+   * power-menu Luna Restart taken with this job stopped can freeze the device.
+   * Observed on webOS CE 3.1.0, build 600064.
+   *
+   * Sleeping before we fail spaces retries wider than upstart's limit window
+   * (10 respawns in 5s), so a name conflict becomes a slow retry rather than a
+   * storm, the job is never parked, and when the other instance goes away the
+   * next respawn takes the name for real. Exiting non-zero also stops us
+   * telling upstart -- and the log -- that a failure was a success.
+   */
+  fprintf(stderr, "org.webosinternals.ipkgservice: could not register the bus "
+                  "name (another instance is probably serving it); retrying\n");
+  sleep(5);
+  return 1;
 
 }
