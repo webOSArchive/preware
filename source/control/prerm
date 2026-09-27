@@ -13,9 +13,12 @@ APPS=/media/cryptofs/apps
 
 [ -d $APPS ] || { echo "Requires webOS 1.3.5 or later" ; exit 1 ; }
 
-# Only remove the service if neither Preware or Preware Alpha will remain
-if [ ! -f ${APPS}/usr/palm/applications/${PID}/appinfo.json -o \
-     ! -f ${APPS}/usr/palm/applications/${PID}-alpha/appinfo.json ] ; then
+# Only remove the service if no other app that uses it will remain: Preware
+# Alpha, or Preware 2 (com.palm.app.preware2), which installs the very same
+# service. Our own appinfo.json is still present while this script runs, so
+# only the others are checked.
+if [ ! -f ${APPS}/usr/palm/applications/${PID}-alpha/appinfo.json -a \
+     ! -f ${APPS}/usr/palm/applications/com.palm.app.preware2/appinfo.json ] ; then
 
   # Remove the ipkgservice executable
   rm -f /var/usr/sbin/${SID}

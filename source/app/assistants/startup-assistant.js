@@ -10,6 +10,8 @@ function StartupAssistant(changelog)
     // on new version start
     this.newMessages =
 	[
+	 {	 version: '1.9.20', log: [ 'Removed the App Museum feed',
+	 		'Uninstalling Preware keeps the package service when Preware 2 is still installed' ] },
 	 {	 version: '1.9.19', log: [ 'Support for webOS Community Edition 3.1' ] },
 	 {	 version: '1.9.18', log: [ 'Accelerate feed loading with parallel fetches, thanks to Herrie' ] },
 	 {	 version: '1.9.17', log: [ 'Added and enabled the webOS Archive Modernize feed (TLS 1.2/1.3, root certificates, QupZilla, webOS CE)' ] },

@@ -1,3 +1,4 @@
 [D-BUS Service]
 Name=org.webosinternals.ipkgservice
 Exec=/var/usr/sbin/org.webosinternals.ipkgservice
+Type=static
