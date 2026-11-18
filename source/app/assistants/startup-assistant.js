@@ -10,6 +10,7 @@ function StartupAssistant(changelog)
     // on new version start
     this.newMessages =
 	[
+	 {	 version: '1.9.22', log: [ 'Removed the PivotCE feed, which has gone offline' ] },
 	 {	 version: '1.9.21', log: [ 'The package service no longer keeps restarting in the background after Preware is updated' ] },
 	 {	 version: '1.9.20', log: [ 'Removed the App Museum feed',
 	 		'Uninstalling Preware keeps the package service when Preware 2 is still installed' ] },
