@@ -2,7 +2,7 @@ Preware is a webOS on-device homebrew installer.
 
 ## Building
 
-The `build.sh` script should do (or at least, suggest) everything you need -- except for signing keys...
+The `build.sh` script should do (or at least, suggest) everything you need.
 
 Pass `i686` to build for the emulator instead of a device: `./build.sh i686`.
 
@@ -14,7 +14,7 @@ works fine.
 
 ## About Keys
 
-The original build server is lost to time, so its impossible to officially sign builds. However, the key files can be found in an original release package. Extract them from that package, and add to the `keys` folder to produce a working build.
+The original build server is lost to time, so it's impossible to officially sign builds. Builds don't need to be signed: an ipk without key files installs and runs fine on webOS devices. If the key files from an original release package are placed in the `keys` folder, `build.sh` adds them to the ipk; otherwise it leaves them out.
 
 ## webOS Community Edition 3.1
 

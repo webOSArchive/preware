@@ -1,16 +1,11 @@
 #!/bin/bash
 APPID=org.webosinternals.preware
-READY=1
 mkdir -p ./bin
-[ ! -f keys/cert.pem ] && echo "cert.pem does not exist!" && READY=0
-[ ! -f keys/pubkey.pem ] && echo "pubkey.pem does not exist!" && READY=0
-[ ! -f keys/signature.sha1 ] && echo "signature.sha1 does not exist!" && READY=0
-if [ "$READY" -lt "1" ]; then
-    echo
-    echo "Signing keys were not found, this build will NOT run properly on a webOS device"
-    echo "To make a working build, extract the signing keys from a previous official build"
-    echo
-fi
+# Signing files are optional: builds without them install and run fine on webOS
+KEYS=1
+for key in cert.pem pubkey.pem signature.sha1; do
+    [ ! -f keys/$key ] && KEYS=0
+done
 
 useBin=arm
 for arg in "$@"; do
@@ -39,9 +34,13 @@ fi
 echo "adding install files..."
 ar qv $ipk source/pmPostInstall.script
 ar qv $ipk source/pmPreRemove.script
-ar qv $ipk keys/cert.pem
-ar qv $ipk keys/pubkey.pem
-ar qv $ipk keys/signature.sha1
+if [ "$KEYS" -eq "1" ]; then
+    ar qv $ipk keys/cert.pem
+    ar qv $ipk keys/pubkey.pem
+    ar qv $ipk keys/signature.sha1
+else
+    echo "signing files not found in keys/, leaving them out"
+fi
 mv $ipk ${ipk%_all.ipk}_$useBin.ipk
 for file in "./bin"/*.ipk; do
     [[ $file -nt $ipk ]] && ipk=$file
